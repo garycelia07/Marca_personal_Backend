@@ -4,16 +4,9 @@
   "description": "API backend (NestJS, monolito modular) para plataforma institucional + LMS de Gary Mayhua. DB y Storage en Supabase.",
   "private": true,
   "license": "UNLICENSED",
+  "packageManager": "pnpm@12.3.4",
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
-  },
-  "overrides": {
-    "qs": "^6.16.0",
-    "multer": "^2.3.0",
-    "lodash": "^4.18.1",
-    "js-yaml": "^5.4.1",
-    "body-parser": "^1.20.6",
-    "file-type": "^21.3.4"
   },
   "jest": {
     "moduleFileExtensions": ["js", "json", "ts"],

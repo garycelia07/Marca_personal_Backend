@@ -57,17 +57,21 @@ Storage no aplica: los archivos viven en el disco del VPS (ver siguiente secció
 
 ## Puesta en marcha local
 
+Requiere [pnpm](https://pnpm.io) (`corepack enable && corepack prepare pnpm@latest --activate`, o `npm install -g pnpm`).
+
 ```bash
 cp .env.example .env
 # completar .env con los datos de tu proyecto Supabase
 
-npm install
-npm run prisma:generate
-npm run prisma:deploy      # aplica el historial de prisma/migrations/ (no crea migraciones nuevas)
-npx prisma db seed         # crea el usuario admin inicial (ADMIN_SEED_EMAIL/PASSWORD)
+pnpm install
+pnpm run prisma:generate
+pnpm run prisma:deploy     # aplica el historial de prisma/migrations/ (no crea migraciones nuevas)
+pnpm exec prisma db seed   # crea el usuario admin inicial (ADMIN_SEED_EMAIL/PASSWORD)
 
-npm run start:dev
+pnpm run start:dev
 ```
+
+La primera vez, pnpm puede pedir aprobar los scripts de instalación de `@nestjs/core` y `prisma`/`@prisma/client` (generan el cliente de Prisma): `pnpm approve-builds --all`.
 
 API disponible en `http://localhost:3000/api/v1`.
 
@@ -75,10 +79,10 @@ API disponible en `http://localhost:3000/api/v1`.
 
 El schema tiene historial versionado en `prisma/migrations/` (ya no se usa `prisma db push`, que no deja rastro de qué cambió ni cuándo).
 
-- **Aplicar migraciones existentes** (clonaste el repo, o estás desplegando): `npx prisma migrate deploy`. No pide nada interactivo, seguro para CI/producción.
+- **Aplicar migraciones existentes** (clonaste el repo, o estás desplegando): `pnpm exec prisma migrate deploy`. No pide nada interactivo, seguro para CI/producción.
 - **Crear una migración nueva** (cambiaste `prisma/schema.prisma`): en tu propia terminal (esto SÍ es interactivo, no corre en un entorno automatizado):
   ```bash
-  npx prisma migrate dev --name describe_el_cambio
+  pnpm exec prisma migrate dev --name describe_el_cambio
   ```
   Esto genera el SQL, lo aplica a tu DB de desarrollo, y lo versiona en `prisma/migrations/<timestamp>_describe_el_cambio/`. Commitear esa carpeta junto con el cambio de schema.
 - **Nunca** editar una migración ya commiteada y aplicada en cualquier ambiente compartido — si algo salió mal, se crea una migración nueva que corrige, igual que con cualquier otro código versionado.
@@ -93,11 +97,11 @@ Con el servidor corriendo:
   3. Ya se puede probar cualquier endpoint protegido, incluida la subida de PDFs (el campo `file` aparece como selector de archivo real).
 - **JSON crudo (OpenAPI 3)**: http://localhost:3000/api/docs-json — úsalo para generar un cliente tipado en el front automáticamente, por ejemplo con [`openapi-typescript`](https://www.npmjs.com/package/openapi-typescript) u [`orval`](https://orval.dev/):
   ```bash
-  npx openapi-typescript http://localhost:3000/api/docs-json -o src/types/api.d.ts
+  pnpm dlx openapi-typescript http://localhost:3000/api/docs-json -o src/types/api.d.ts
   ```
   Así el front tiene los tipos exactos de cada request/response sin escribirlos a mano, y cualquier cambio en el backend se refleja regenerando ese archivo.
 
-Los DTOs se documentan solos gracias al plugin `@nestjs/swagger` (configurado en `nest-cli.json`), que lee los tipos de TypeScript en tiempo de build — por eso alcanza con correr `npm run build`/`start:dev` para que la doc quede al día, sin mantenerla a mano aparte.
+Los DTOs se documentan solos gracias al plugin `@nestjs/swagger` (configurado en `nest-cli.json`), que lee los tipos de TypeScript en tiempo de build — por eso alcanza con correr `pnpm run build`/`start:dev` para que la doc quede al día, sin mantenerla a mano aparte.
 
 ## Endpoints principales
 
@@ -132,10 +136,10 @@ GET    /api/v1/leads                               (admin)
 ## Testing
 
 ```bash
-npm test          # unit tests (src/**/*.spec.ts)
-npm run test:watch
-npm run test:cov  # con reporte de cobertura
-npm run test:e2e  # e2e (test/**/*.e2e-spec.ts)
+pnpm test          # unit tests (src/**/*.spec.ts)
+pnpm run test:watch
+pnpm run test:cov  # con reporte de cobertura
+pnpm run test:e2e  # e2e (test/**/*.e2e-spec.ts)
 ```
 
 **Ninguno de los dos toca tu Supabase real**: `PrismaService` se reemplaza por un mock profundo y tipado (`jest-mock-extended`, ver `src/test/prisma-mock.ts`), así que corren rápido, en cualquier máquina/CI, sin depender de la red ni de datos existentes en la base.
@@ -162,7 +166,8 @@ npm run test:e2e  # e2e (test/**/*.e2e-spec.ts)
 - ✅ `tsconfig.json` con `"strict": true` completo (antes solo algunas flags sueltas).
 - ✅ La API falla fuerte al arrancar si falta `JWT_SECRET`/`DATABASE_URL`/`DIRECT_URL`, o si `JWT_SECRET` es muy corto — ya no hay fallback silencioso a un secreto de desarrollo (`src/config/env.validation.ts`).
 - ✅ Paginación (`?page=&limit=`, máx. 100 por página) en todos los listados: estudiantes, cursos, materiales, leads, enrollments. Respuesta uniforme `{ data, meta: { total, page, limit, totalPages } }`.
-- ✅ Vulnerabilidades de `npm audit` en dependencias de producción: de 28 a 4 (las 4 restantes exigen migrar Nest 10→11, un upgrade de framework mayor, fuera de alcance de un fix de rebote). Se reemplazó `bcrypt` nativo por `bcryptjs` (sin binarios nativos, mejor también para el deploy en VPS) y se fijaron versiones parcheadas de `qs`, `multer`, `lodash`, `js-yaml` y `body-parser` vía `overrides` en `package.json`.
+- ✅ Vulnerabilidades de `npm audit` en dependencias de producción: de 28 a 4 (las 4 restantes exigen migrar Nest 10→11, un upgrade de framework mayor, fuera de alcance de un fix de rebote). Se reemplazó `bcrypt` nativo por `bcryptjs` (sin binarios nativos, mejor también para el deploy en VPS) y se fijaron versiones parcheadas de `qs`, `multer`, `lodash`, `js-yaml` y `body-parser` vía `overrides` en `pnpm-workspace.yaml`.
+- ✅ Gestor de paquetes: pnpm en vez de npm (instalación más rápida, `node_modules` estricto que evita dependencias fantasma, lockfile único versionado).
 
 **Sigue pendiente** (de la auditoría original):
 - Rate limiting ya incluido (`ThrottlerModule`) pero genérico — falta un límite más estricto específico para `/auth/login` (fuerza bruta).

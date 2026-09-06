@@ -1,6 +1,10 @@
 # Dependencias
 node_modules
 
+# Este proyecto usa pnpm — ignorar lockfiles de otros gestores para que nadie los commitee por error
+package-lock.json
+yarn.lock
+
 # Build
 dist
 *.tsbuildinfo
