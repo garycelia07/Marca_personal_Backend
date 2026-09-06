@@ -1,0 +1,159 @@
+// Schema de base de datos - Postgres alojado en Supabase
+// Convención: nombres de tabla en snake_case vía @@map, modelos en PascalCase.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum ContentSection {
+  HERO
+  ABOUT // Nosotros
+  STORY // Mi Historia
+  PROJECTS // Proyectos
+  SERVICES // Servicios
+  SOCIAL_LINKS // Redes sociales
+}
+
+enum LeadChannel {
+  WHATSAPP
+  CONTACT_FORM
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  fullName         String    @map("full_name")
+  role             Role      @default(STUDENT)
+  isActive         Boolean   @default(true) @map("is_active")
+  // Vigencia global de acceso definida por el admin al registrar al alumno.
+  // null = sin expiración (uso típico para ADMIN).
+  accessExpiresAt  DateTime? @map("access_expires_at")
+  lastLoginAt      DateTime? @map("last_login_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  enrollments Enrollment[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String?
+  coverImageUrl String? @map("cover_image_url")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  modules     CourseModule[]
+  enrollments Enrollment[]
+  materials   Material[]
+
+  @@map("courses")
+}
+
+model CourseModule {
+  id        String   @id @default(uuid())
+  courseId  String   @map("course_id")
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("course_modules")
+}
+
+model Lesson {
+  id          String   @id @default(uuid())
+  moduleId    String   @map("module_id")
+  title       String
+  description String?
+  videoUrl    String?  @map("video_url")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  module    CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  materials Material[]
+
+  @@map("lessons")
+}
+
+// PDFs / material descargable. El archivo físico vive en Supabase Storage;
+// aquí se guarda únicamente la referencia (path del bucket) y metadata.
+model Material {
+  id         String   @id @default(uuid())
+  title      String
+  storageKey String   @map("storage_key") // path dentro del bucket de Supabase Storage
+  bucket     String
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  courseId   String?  @map("course_id")
+  lessonId   String?  @map("lesson_id")
+  isPublic   Boolean  @default(false) @map("is_public") // material descargable del landing vs. privado del curso
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  course Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+// Relación estudiante-curso. Permite dar acceso a cursos puntuales y,
+// opcionalmente, una vigencia distinta a la del usuario (más restrictiva o amplia).
+model Enrollment {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  courseId       String    @map("course_id")
+  expiresAt      DateTime? @map("expires_at")
+  progressPercent Int      @default(0) @map("progress_percent")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+// CMS liviano para el landing público: cada fila es un bloque editable
+// (hero, nosotros, historia, proyectos, servicios, redes) con contenido en JSON
+// para no atarse a un esquema rígido por sección.
+model ContentBlock {
+  id        String         @id @default(uuid())
+  section   ContentSection @unique
+  data      Json
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@map("content_blocks")
+}
+
+// Leads generados desde el botón flotante de WhatsApp o formularios de contacto.
+model Lead {
+  id        String      @id @default(uuid())
+  name      String?
+  email     String?
+  phone     String?
+  message   String?
+  channel   LeadChannel @default(CONTACT_FORM)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@map("leads")
+}
