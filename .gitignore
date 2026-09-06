@@ -1,0 +1,29 @@
+# Dependencias
+node_modules
+
+# Build
+dist
+*.tsbuildinfo
+
+# Variables de entorno (contienen credenciales de Supabase, JWT_SECRET, etc.)
+.env
+.env.local
+.env.*.local
+.env.test
+
+# Archivos subidos al VPS (PDFs/imágenes de materiales) — no van al repo
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Tests
+coverage
+
+# Editor / OS
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
