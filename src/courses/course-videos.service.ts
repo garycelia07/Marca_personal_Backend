@@ -12,6 +12,7 @@ import {
   isCloudinaryConfigured,
   type CloudinaryCreds,
   uploadVideoToCloudinary,
+  signCloudinaryVideoUpload,
 } from '../config/cloudinary.util';
 
 const MAX_LEGAL_SECONDS = 10 * 60; // 10 min
@@ -151,6 +152,16 @@ export class LessonVideosService implements OnModuleInit {
       seconds: Math.round(seconds),
       bytes: file.size,
     };
+  }
+
+  /** Entrega parámetros FIRMADOS para que el navegador suba el video directo a Cloudinary. */
+  async videoUploadSignature(lessonId: string) {
+    if (!this.cloudEnabled || !this.cloudCreds) {
+      throw new BadRequestException(
+        'Cloudinary no está configurado. Usa la subida clásica (disco).',
+      );
+    }
+    return signCloudinaryVideoUpload(this.cloudCreds, lessonId);
   }
 
   /** Elimina el video de la lección de Cloudinary (si aplica) y de disco. */

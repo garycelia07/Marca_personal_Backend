@@ -1,4 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
+import { createHash } from 'crypto';
 export interface CloudinaryCreds {
   cloudName: string;
   apiKey: string;
@@ -105,4 +106,52 @@ export async function destroyCloudinaryVideo(
     // eslint-disable-next-line no-console
     console.warn('No se pudo destruir el video en Cloudinary:', (error as Error).message);
   }
+}
+
+export interface SignedVideoUpload {
+  cloudName: string;
+  apiKey: string;
+  signature: string;
+  timestamp: string;
+  folder: string;
+  publicId: string;
+  resourceType: string;
+  overwrite: string;
+}
+
+/**
+ * Emite una subida FIRMADA para que el navegador suba el video directo a
+ * Cloudinary (evitando pasar el archivo por la función de Vercel / el 413).
+ * El secreto del API nunca viaja al cliente: solo la firma generada con él.
+ */
+export function signCloudinaryVideoUpload(
+  creds: CloudinaryCreds,
+  lessonId: string,
+): SignedVideoUpload {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const folder = LESSON_VIDEO_FOLDER;
+  const publicId = `lesson-${lessonId}`;
+  const params: Record<string, string> = {
+    timestamp,
+    folder,
+    public_id: publicId,
+    overwrite: 'true',
+    resource_type: 'video',
+  };
+  const canonical = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join('&');
+  const toHash = `${canonical}${creds.apiSecret}`;
+  const signature = createHash('sha1').update(toHash).digest('hex');
+  return {
+    cloudName: creds.cloudName,
+    apiKey: creds.apiKey,
+    signature,
+    timestamp,
+    folder,
+    publicId,
+    resourceType: 'video',
+    overwrite: 'true',
+  };
 }

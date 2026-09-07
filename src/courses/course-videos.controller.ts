@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   FileTypeValidator,
@@ -64,6 +65,26 @@ export class CourseVideosController {
       url,
       seconds: result.seconds,
     };
+  }
+
+  @Get(':id/video/sign')
+  @ApiOperation({
+    summary: 'Firma de subida directa a Cloudinary para el video de una lección (admin)',
+  })
+  async signUpload(@Param('id') id: string) {
+    // NO validamos aquí la pertenencia: el guard de roles/R al controlador ya exige ADMIN.
+    return this.videos.videoUploadSignature(id);
+  }
+
+  @Put(':id/video-url')
+  @ApiOperation({ summary: 'Guardar la URL del video (subida directa ya hecha) de una lección (admin)' })
+  async setVideoUrl(@Param('id') id: string, @Body() body: { videoUrl?: string }) {
+    const url = typeof body?.videoUrl === 'string' ? body.videoUrl.trim() : '';
+    if (!url) {
+      return { error: 'videoUrl es obligatorio.' };
+    }
+    await this.prisma.lesson.update({ where: { id }, data: { videoUrl: url } });
+    return { ok: true as true, url };
   }
 
   @Public()
