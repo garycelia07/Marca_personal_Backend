@@ -6,6 +6,7 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../common/enums/role.enum';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
@@ -15,6 +16,7 @@ import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar cursos publicados, paginado (con sus módulos)' })
   findAllPublished(@Query() query: PaginationQueryDto) {
@@ -28,6 +30,7 @@ export class CoursesController {
     return this.coursesService.findAllForAdmin(query);
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de un curso con módulos, lecciones y materiales' })
   findOne(@Param('id') id: string) {

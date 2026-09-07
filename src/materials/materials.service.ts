@@ -29,14 +29,20 @@ export class MaterialsService implements OnModuleInit {
     return name.replace(/[^a-zA-Z0-9._-]/g, '_');
   }
 
+  private categoryFolder(mimeType: string): string {
+    return mimeType.startsWith('image/') ? 'images' : 'pdfs';
+  }
+
   private absolutePath(storageKey: string): string {
     return join(this.uploadDir, storageKey);
   }
 
   async upload(dto: CreateMaterialDto, file: Express.Multer.File) {
-    const storageKey = `${dto.courseId ?? 'general'}/${randomUUID()}-${this.sanitizeFileName(file.originalname)}`;
+    const category = this.categoryFolder(file.mimetype);
+    const courseFolder = dto.courseId ?? 'general';
+    const storageKey = `${category}/${courseFolder}/${randomUUID()}-${this.sanitizeFileName(file.originalname)}`;
 
-    await mkdir(join(this.uploadDir, dto.courseId ?? 'general'), { recursive: true });
+    await mkdir(join(this.uploadDir, category, courseFolder), { recursive: true });
     await writeFile(this.absolutePath(storageKey), file.buffer);
 
     return this.prisma.material.create({
@@ -62,10 +68,11 @@ export class MaterialsService implements OnModuleInit {
     let sizeBytes = existing.sizeBytes;
 
     if (file) {
+      const category = this.categoryFolder(file.mimetype);
       const courseFolder = dto.courseId ?? existing.courseId ?? 'general';
-      const newStorageKey = `${courseFolder}/${randomUUID()}-${this.sanitizeFileName(file.originalname)}`;
+      const newStorageKey = `${category}/${courseFolder}/${randomUUID()}-${this.sanitizeFileName(file.originalname)}`;
 
-      await mkdir(join(this.uploadDir, courseFolder), { recursive: true });
+      await mkdir(join(this.uploadDir, category, courseFolder), { recursive: true });
       await writeFile(this.absolutePath(newStorageKey), file.buffer);
 
       // se escribe el nuevo antes de borrar el viejo

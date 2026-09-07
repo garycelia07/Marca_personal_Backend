@@ -1,0 +1,7 @@
+# Override LOCAL (no se despliega en el VPS). Solo para desarrollo en tu máquina:
+# publica el puerto de la API del contenedor en 127.0.0.1:3001 para que el
+# frontend (next dev en :3000) pueda consumir el backend real.
+services:
+  api:
+    ports:
+      - "127.0.0.1:3001:3000"

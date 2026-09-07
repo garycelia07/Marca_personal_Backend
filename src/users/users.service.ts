@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Role } from '../common/enums/role.enum';
@@ -11,7 +12,10 @@ const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   async createStudent(dto: CreateStudentDto) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
@@ -19,7 +23,7 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
-    return this.prisma.user.create({
+    const student = await this.prisma.user.create({
       data: {
         email: dto.email,
         fullName: dto.fullName,
@@ -29,6 +33,15 @@ export class UsersService {
       },
       select: this.publicSelect(),
     });
+
+    await this.mail.sendAccessGranted({
+      to: dto.email,
+      fullName: dto.fullName,
+      password: dto.password,
+      expiresAt: dto.accessExpiresAt ? new Date(dto.accessExpiresAt) : undefined,
+    });
+
+    return student;
   }
 
   async findAllStudents(query: PaginationQueryDto) {
@@ -83,6 +96,12 @@ export class UsersService {
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
+    return { success: true };
+  }
+
+  async sendEmail(id: string, subject: string, body: string) {
+    const user = await this.findOne(id);
+    await this.mail.sendCustomEmail({ to: user.email, subject, body });
     return { success: true };
   }
 

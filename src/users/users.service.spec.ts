@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { createPrismaMock, MockPrisma } from '../test/prisma-mock';
 import { Role } from '../common/enums/role.enum';
 
@@ -23,7 +24,11 @@ describe('UsersService', () => {
   beforeEach(async () => {
     prisma = createPrismaMock();
     const moduleRef = await Test.createTestingModule({
-      providers: [UsersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MailService, useValue: { sendAccessGranted: jest.fn().mockResolvedValue(undefined), sendCustomEmail: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compile();
     service = moduleRef.get(UsersService);
   });

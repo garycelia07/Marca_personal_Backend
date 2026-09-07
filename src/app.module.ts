@@ -12,11 +12,19 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { ContentModule } from './content/content.module';
 import { LeadsModule } from './leads/leads.module';
 import { HealthModule } from './health/health.module';
+import { MailModule } from './mail/mail.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { SystemModule } from './system/system.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    MailModule,
+    DashboardModule,
+    RatingsModule,
+    SystemModule,
     PrismaModule,
     AuthModule,
     UsersModule,

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -73,5 +73,24 @@ export class EnrollmentsService {
     if (!enrollment) throw new NotFoundException('Inscripción no encontrada');
     await this.prisma.enrollment.delete({ where: { id } });
     return { success: true };
+  }
+
+  async updateProgress(id: string, userId: string, progressPercent: number) {
+    if (!Number.isFinite(progressPercent)) {
+      throw new BadRequestException('progressPercent debe ser un número');
+    }
+
+    const enrollment = await this.prisma.enrollment.findUnique({ where: { id } });
+    if (!enrollment) throw new NotFoundException('Inscripción no encontrada');
+    if (enrollment.userId !== userId) {
+      throw new ForbiddenException('No tienes acceso a esta inscripción');
+    }
+
+    const value = Math.min(100, Math.max(0, Math.round(progressPercent)));
+
+    return this.prisma.enrollment.update({
+      where: { id },
+      data: { progressPercent: value },
+    });
   }
 }

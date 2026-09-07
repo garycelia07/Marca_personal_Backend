@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  url= env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -45,6 +45,7 @@ model User {
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   enrollments Enrollment[]
+  ratings     Rating[]
 
   @@map("users")
 }
@@ -62,6 +63,7 @@ model Course {
   modules     CourseModule[]
   enrollments Enrollment[]
   materials   Material[]
+  ratings     Rating[]
 
   @@map("courses")
 }
@@ -133,9 +135,23 @@ model Enrollment {
   @@map("enrollments")
 }
 
-// CMS liviano para el landing público: cada fila es un bloque editable
-// (hero, nosotros, historia, proyectos, servicios, redes) con contenido en JSON
-// para no atarse a un esquema rígido por sección.
+// Calificación y reseña pública de un curso por un estudiante (estrellas 1-5 + comentario).
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  courseId  String   @map("course_id")
+  stars     Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("ratings")
+}
+
 model ContentBlock {
   id        String         @id @default(uuid())
   section   ContentSection @unique

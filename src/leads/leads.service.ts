@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { buildPaginatedResult, toSkipTake } from '../common/utils/pagination.util';
 
 @Injectable()
 export class LeadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
-  create(dto: CreateLeadDto) {
+  async create(dto: CreateLeadDto) {
+    await this.mail.sendLeadNotification({ lead: dto });
     return this.prisma.lead.create({ data: dto });
   }
 

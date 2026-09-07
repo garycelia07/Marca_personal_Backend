@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { LeadChannel } from '@prisma/client';
 import { LeadsService } from './leads.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { createPrismaMock, MockPrisma } from '../test/prisma-mock';
 
 describe('LeadsService', () => {
@@ -11,7 +12,11 @@ describe('LeadsService', () => {
   beforeEach(async () => {
     prisma = createPrismaMock();
     const moduleRef = await Test.createTestingModule({
-      providers: [LeadsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        LeadsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MailService, useValue: { sendLeadNotification: jest.fn().mockResolvedValue(undefined) } },
+      ],
     }).compile();
     service = moduleRef.get(LeadsService);
   });

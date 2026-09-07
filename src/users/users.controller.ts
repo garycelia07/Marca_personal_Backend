@@ -12,6 +12,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { UsersService } from './users.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { SendEmailDto } from './dto/send-email.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -75,5 +76,12 @@ export class UsersController {
   @ApiParam({ name: 'id', format: 'uuid' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Post(':id/email')
+  @ApiOperation({ summary: 'Enviar un correo personalizado al estudiante desde el panel (admin)' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  sendEmail(@Param('id') id: string, @Body() dto: SendEmailDto) {
+    return this.usersService.sendEmail(id, dto.subject, dto.body);
   }
 }

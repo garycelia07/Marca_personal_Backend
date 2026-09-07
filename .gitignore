@@ -14,12 +14,14 @@ dist
 .env.local
 .env.*.local
 .env.test
+.env.production
 
 # Archivos subidos al VPS (PDFs/imágenes de materiales) — no van al repo
 uploads/
 
-# Script de seed con datos/credenciales de prueba — solo local, no se versiona
-prisma/seed.ts
+# Archivos temporales/entorno de la máquina de desarrollo
+build.log
+state.txt
 
 # Logs
 *.log

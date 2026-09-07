@@ -55,4 +55,20 @@ export class EnrollmentsController {
   remove(@Param('id') id: string) {
     return this.enrollmentsService.remove(id);
   }
+
+  @Patch(':id/progress')
+  @ApiOperation({ summary: 'Actualizar mi progreso en un curso (0-100), solo el estudiante dueño' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { progressPercent: { type: 'integer', minimum: 0, maximum: 100 } },
+    },
+  })
+  updateProgress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body('progressPercent') progressPercent: number,
+  ) {
+    return this.enrollmentsService.updateProgress(id, user.sub, progressPercent);
+  }
 }

@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { ContentSection, LeadChannel } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { MailService } from '../src/mail/mail.service';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 import { createPrismaMock, MockPrisma } from '../src/test/prisma-mock';
 import { Role } from '../src/common/enums/role.enum';
@@ -70,6 +71,12 @@ describe('App (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prisma)
+      .overrideProvider(MailService)
+      .useValue({
+        sendAccessGranted: jest.fn().mockResolvedValue(undefined),
+        sendLeadNotification: jest.fn().mockResolvedValue(undefined),
+        sendCustomEmail: jest.fn().mockResolvedValue(undefined),
+      })
       .compile();
 
     app = moduleRef.createNestApplication();
