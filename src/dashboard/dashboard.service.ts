@@ -23,6 +23,13 @@ export class DashboardService {
     const progressAgg = await this.prisma.enrollment.aggregate({ _avg: { progressPercent: true } });
     const completed = await this.prisma.enrollment.count({ where: { progressPercent: { gte: 100 } } });
 
+    const totalLeads = await this.prisma.lead.count();
+    const recentLeads = await this.prisma.lead.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, email: true, name: true, message: true, createdAt: true },
+    });
+
     const byCourse = await this.prisma.enrollment.groupBy({
       by: ['courseId'],
       _count: { _all: true },
@@ -57,6 +64,10 @@ export class DashboardService {
         students: row._count._all,
         averagePercent: row._avg.progressPercent ?? 0,
       })),
+      leads: {
+        total: totalLeads,
+        recent: recentLeads,
+      },
     };
   }
 }

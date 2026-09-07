@@ -142,6 +142,7 @@ model Rating {
   courseId  String   @map("course_id")
   stars     Int
   comment   String?
+  isVisible Boolean  @default(true) @map("is_visible")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

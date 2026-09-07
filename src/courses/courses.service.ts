@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -83,6 +83,30 @@ export class CoursesService {
   async addLesson(moduleId: string, dto: CreateLessonDto) {
     const module = await this.prisma.courseModule.findUnique({ where: { id: moduleId } });
     if (!module) throw new NotFoundException('Módulo no encontrado');
+
+    // Máximo 20 lecciones-video por curso.
+    const mods = await this.prisma.courseModule.findMany({
+      where: { courseId: module.courseId },
+      select: { _count: { select: { lessons: true } } },
+    });
+    const lessonCount = mods.reduce((sum, m) => sum + m._count.lessons, 0);
+    if (lessonCount >= 20) {
+      throw new BadRequestException('Un curso admite máximo 20 videos (lecciones). Elimina uno antes de agregar otro.');
+    }
+
     return this.prisma.lesson.create({ data: { ...dto, moduleId } });
+  }
+
+  async updateLesson(lessonId: string, dto: Partial<CreateLessonDto>) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) throw new NotFoundException('Lección no encontrada');
+    return this.prisma.lesson.update({ where: { id: lessonId }, data: { ...(dto.title ? { title: dto.title } : {}), ...(dto.description !== undefined ? { description: dto.description } : {}) } });
+  }
+
+  async removeLesson(lessonId: string) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) throw new NotFoundException('Lección no encontrada');
+    await this.prisma.lesson.delete({ where: { id: lessonId } });
+    return { success: true };
   }
 }

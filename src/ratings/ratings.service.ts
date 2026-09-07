@@ -32,12 +32,12 @@ export class RatingsService {
 
     const [ratings, aggregate] = await Promise.all([
       this.prisma.rating.findMany({
-        where: { courseId },
+        where: { courseId, isVisible: true },
         include: { user: { select: { fullName: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.rating.aggregate({
-        where: { courseId },
+        where: { courseId, isVisible: true },
         _avg: { stars: true },
         _count: { _all: true },
       }),
@@ -54,5 +54,33 @@ export class RatingsService {
       average: aggregate._avg.stars ?? 0,
       total: aggregate._count._all,
     };
+  }
+
+  /** Listado completo (incluye ocultos) para el panel de administración. */
+  async findByCourseAdmin(courseId: string) {
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Curso no encontrado');
+
+    const ratings = await this.prisma.rating.findMany({
+      where: { courseId },
+      include: { user: { select: { fullName: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return ratings.map((r) => ({
+      id: r.id,
+      fullName: r.user.fullName,
+      stars: r.stars,
+      comment: r.comment,
+      isValid: true,
+      isVisible: r.isVisible,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  /** Admin marca un comentario como visible u oculto (moderación). */
+  async setVisibility(id: string, isVisible: boolean) {
+    const rating = await this.prisma.rating.findUnique({ where: { id } });
+    if (!rating) throw new NotFoundException('Calificación no encontrada');
+    return this.prisma.rating.update({ where: { id }, data: { isVisible } });
   }
 }
