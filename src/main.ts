@@ -8,7 +8,13 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+     
+      // con `net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin` (imagenes/videos públicos).
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? true,
     credentials: true,

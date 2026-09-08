@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
+import { stat } from 'fs/promises';
 import type { Request, Response } from 'express';
 import { ProjectVideosService } from './project-videos.service';
 import { Public } from '../common/decorators/public.decorator';
@@ -102,13 +103,49 @@ export class ProjectVideosController {
   @Get(':name/cover')
   @ApiOperation({ summary: 'Ver la imagen de portada pública de un proyecto (sin token)' })
   @ApiParam({ name: 'name', description: 'Identificador del proyecto' })
-  async streamCover(@Param('name') name: string, @Res({ passthrough: true }) res: Response) {
+  async streamCover(
+    @Param('name') name: string,
+    @Res() res: Response,
+  ) {
     const found = await this.videos.findCover(projectName(name));
-    if (!found) throw new NotFoundException('El proyecto aún no tiene portada');
-    res.setHeader('Content-Type', found.mime);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    const range = undefined;
-    return this.streamRange(res, found.path, found.size, range);
+
+    if (!found) {
+      throw new NotFoundException('El proyecto aún no tiene portada');
+    }
+
+    try {
+      const info = await stat(found.path);
+
+      if (!info.isFile()) {
+        throw new Error('not-file');
+      }
+
+      res.setHeader('Content-Type', found.mime);
+      res.setHeader('Content-Length', String(info.size));
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const stream = createReadStream(found.path);
+
+      stream.on('error', (error) => {
+        console.error('Error leyendo portada:', error);
+
+        if (!res.headersSent) {
+          res.status(500).end();
+        } else {
+          res.end();
+        }
+      });
+
+      stream.pipe(res);
+    } catch (error) {
+      console.error('Error sirviendo portada:', error);
+
+      if (!res.headersSent) {
+        throw new NotFoundException(
+          'La portada del proyecto aún no está disponible',
+        );
+      }
+    }
   }
 
   // ============================ STREAMING CON RANGE ============================
@@ -124,10 +161,14 @@ export class ProjectVideosController {
       res.status(206);
       res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
       res.setHeader('Content-Length', String(end - start + 1));
-      return createReadStream(filePath, { start, end }).pipe(res);
+      const part = createReadStream(filePath, { start, end });
+      part.on('error', () => { if (!res.headersSent) { res.status(416).end(); } else { res.end(); } });
+      return part.pipe(res);
     }
     res.setHeader('Content-Length', String(total));
-    return createReadStream(filePath).pipe(res);
+    const full = createReadStream(filePath);
+    full.on('error', () => { if (!res.headersSent) { res.status(404).end(); } else { res.end(); } });
+    return full.pipe(res);
   }
 }
 
