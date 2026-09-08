@@ -1,3 +1,21 @@
+
+function parseCloudinaryUrl(url?: string): {
+  cloudName?: string;
+  apiKey?: string;
+  apiSecret?: string;
+} {
+  if (!url) return {};
+  const match = /^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/.exec(url.trim());
+  if (!match) return {};
+  const [, key, secret, host] = match;
+  const cloudName = host.split('/')[0];
+  return {
+    cloudName: cloudName || undefined,
+    apiKey: key || undefined,
+    apiSecret: secret || undefined,
+  };
+}
+
 export default () => ({
   port: parseInt(process.env.PORT ?? '3000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -24,8 +42,11 @@ export default () => ({
   },
   cloudinary: {
     url: process.env.CLOUDINARY_URL,
+    // Se pueden definir sueltas (CLOUDINARY_CLOUD_NAME / _API_KEY / _API_SECRET)
+    // o bien una sola CLOUDINARY_URL en formato cloudinary://key:secret@cloud.
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
     apiSecret: process.env.CLOUDINARY_API_SECRET,
+    ...parseCloudinaryUrl(process.env.CLOUDINARY_URL),
   },
 });
