@@ -2,6 +2,11 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { mkdir, rm, stat, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
+import {
+  isCloudinaryConfigured,
+  signCloudinaryUpload,
+  type CloudinaryCreds,
+} from '../config/cloudinary.util';
 
 /**
  * Media por "proyecto" de la sección PROJECTS del landing.
@@ -22,9 +27,24 @@ const DEFAULT_IMG_EXT = '.jpg';
 export class ProjectVideosService implements OnModuleInit {
   private readonly projectsDir: string;
 
-  constructor(config: ConfigService) {
+  constructor(private readonly config: ConfigService) {
     const uploadDir = resolve(config.get<string>('storage.uploadDir')!);
     this.projectsDir = join(uploadDir, 'site', 'projects');
+  }
+
+  /** Devuelve la firma de subida directa a Cloudinary para la media pública de un proyecto. */
+  signMediaUpload(
+    nameKey: string,
+    kind: 'cover' | 'video',
+  ): { ok: true; publicId: string; cloudName: string; apiKey: string; signature: string; timestamp: string; overwrite: string } | { ok: false; reason: string } {
+    const cloud = this.config.get<{ cloudName?: string; apiKey?: string; apiSecret?: string }>('cloudinary');
+    if (!cloud || !isCloudinaryConfigured(cloud)) {
+      return { ok: false, reason: 'cloudinary-not-configured' };
+    }
+    const creds: CloudinaryCreds = { cloudName: cloud.cloudName!, apiKey: cloud.apiKey!, apiSecret: cloud.apiSecret! };
+    const publicId = `project-media/${this.forName(nameKey)}/${kind}`;
+    const sign = signCloudinaryUpload(creds, publicId, 'auto');
+    return { ok: true, publicId, cloudName: sign.cloudName, apiKey: sign.apiKey, signature: sign.signature, timestamp: sign.timestamp, overwrite: sign.overwrite };
   }
 
   async onModuleInit() {

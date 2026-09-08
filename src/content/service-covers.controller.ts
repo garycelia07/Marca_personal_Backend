@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
+import { stat } from 'fs/promises';
 import type { Response } from 'express';
 import { ServiceCoversService } from './service-covers.service';
 import { Public } from '../common/decorators/public.decorator';
@@ -55,12 +56,33 @@ export class ServiceCoversController {
   @Get(':name/cover')
   @ApiOperation({ summary: 'Ver la portada pública de un servicio (sin token)' })
   @ApiParam({ name: 'name', description: 'Identificador del servicio' })
-  async stream(@Param('name') name: string, @Res({ passthrough: true }) res: Response) {
+  async stream(@Param('name') name: string, @Res() res: Response) {
     const found = await this.covers.findCover(name);
     if (!found) throw new NotFoundException('El servicio aún no tiene portada');
-    res.setHeader('Content-Type', found.mime);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Content-Length', String(found.size));
-    return createReadStream(found.path).pipe(res);
+
+    try {
+      const info = await stat(found.path);
+      if (!info.isFile()) throw new Error('not-file');
+
+      res.setHeader('Content-Type', found.mime);
+      res.setHeader('Content-Length', String(info.size));
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+
+      const stream = createReadStream(found.path);
+      stream.on('error', (error) => {
+        console.error('Error leyendo portada del servicio:', error);
+        if (!res.headersSent) {
+          res.status(500).end();
+        } else {
+          res.end();
+        }
+      });
+      stream.pipe(res);
+    } catch (error) {
+      console.error('Error sirviendo portada del servicio:', error);
+      if (!res.headersSent) {
+        throw new NotFoundException('La portada del servicio aún no está disponible');
+      }
+    }
   }
 }

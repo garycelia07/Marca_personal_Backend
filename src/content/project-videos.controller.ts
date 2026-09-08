@@ -1,12 +1,14 @@
 import {
   Controller,
   FileTypeValidator,
+  BadRequestException,
   Get,
   MaxFileSizeValidator,
   NotFoundException,
   Param,
   ParseFilePipe,
   Put,
+  Query,
   Req,
   Res,
   UploadedFile,
@@ -35,6 +37,16 @@ function projectName(name: string): string {
 @Controller('content/projects')
 export class ProjectVideosController {
   constructor(private readonly videos: ProjectVideosService) {}
+
+  @Roles(Role.ADMIN)
+  @Get(':name/media-sign')
+  async mediaSign(@Param('name') name: string, @Query('kind') kind?: string) {
+    const k = kind === 'cover' ? 'cover' : kind === 'video' ? 'video' : null;
+    if (!k) throw new BadRequestException('kind debe ser "cover" o "video".');
+    const sign = this.videos.signMediaUpload(projectName(name), k);
+    if (!sign.ok) throw new BadRequestException('Cloudinary no está configurado: configura CLOUDINARY_* o usa disco.');
+    return sign;
+  }
 
   // ============================ VIDEO SUBIDA/STREAM ============================
   @Roles(Role.ADMIN)
