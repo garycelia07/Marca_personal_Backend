@@ -132,11 +132,12 @@ export function signCloudinaryVideoUpload(
 ): SignedVideoUpload {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const publicId = lessonCloudinaryPublicId(lessonId); // course-lessons/lesson-<id>
+  // Cloudinary NO firma resource_type: solo se usa en la URL del endpoint.
+  // Firman únicamente los parámetros del formulario: timestamp, public_id, overwrite.
   const params: Record<string, string> = {
     timestamp,
     public_id: publicId,
     overwrite: 'true',
-    resource_type: 'video',
   };
   const canonical = Object.keys(params)
     .sort()
@@ -150,7 +151,7 @@ export function signCloudinaryVideoUpload(
     signature,
     timestamp,
     publicId,
-    resourceType: 'video',
+    resourceType: 'video', // se sigue devolviendo al front, pero no forma parte de la firma
     overwrite: 'true',
   };
 }
