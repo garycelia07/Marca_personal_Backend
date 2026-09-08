@@ -102,8 +102,7 @@ export async function destroyCloudinaryVideo(
       throw new Error(`Cloudinary destroy falló: ${res.status} ${JSON.stringify(payload)}`);
     }
   } catch (error) {
-    // No bloqueemos un borrado en DB por un fallo de limpieza en el CDN.
-    // eslint-disable-next-line no-console
+ 
     console.warn('No se pudo destruir el video en Cloudinary:', (error as Error).message);
   }
 }
@@ -113,7 +112,6 @@ export interface SignedVideoUpload {
   apiKey: string;
   signature: string;
   timestamp: string;
-  folder: string;
   publicId: string;
   resourceType: string;
   overwrite: string;
@@ -123,17 +121,19 @@ export interface SignedVideoUpload {
  * Emite una subida FIRMADA para que el navegador suba el video directo a
  * Cloudinary (evitando pasar el archivo por la función de Vercel / el 413).
  * El secreto del API nunca viaja al cliente: solo la firma generada con él.
+ *
+ * IMPORTANTE: firmamos el `publicId` COMPLETO con su carpeta (course-lessons/lesson-<id>)
+ * y NO enviamos un campo `folder` aparte. Usar public_id + folder juntos provoca
+ * desajuste de firma (HTTP 400) porque Cloudinary espera la ruta completa en public_id.
  */
 export function signCloudinaryVideoUpload(
   creds: CloudinaryCreds,
   lessonId: string,
 ): SignedVideoUpload {
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const folder = LESSON_VIDEO_FOLDER;
-  const publicId = `lesson-${lessonId}`;
+  const publicId = lessonCloudinaryPublicId(lessonId); // course-lessons/lesson-<id>
   const params: Record<string, string> = {
     timestamp,
-    folder,
     public_id: publicId,
     overwrite: 'true',
     resource_type: 'video',
@@ -149,7 +149,6 @@ export function signCloudinaryVideoUpload(
     apiKey: creds.apiKey,
     signature,
     timestamp,
-    folder,
     publicId,
     resourceType: 'video',
     overwrite: 'true',
