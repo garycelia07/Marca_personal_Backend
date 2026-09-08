@@ -155,3 +155,48 @@ export function signCloudinaryVideoUpload(
     overwrite: 'true',
   };
 }
+
+/**
+ * Firma genérica de subida directa a Cloudinary (imagen o video de un *elemento*,
+ * por ejemplo la portada de un curso). Igual que el video de lección: sólo se
+ * firman los parámetros que realmente van como campos del form-data:
+ * `timestamp`, `public_id`, `overwrite`. `resource_type` se usa en la URL del endpoint
+ * pero nunca dentro de la firma.
+ */
+export interface SignedStreamlessUpload {
+  cloudName: string;
+  apiKey: string;
+  signature: string;
+  timestamp: string;
+  publicId: string;
+  resourceType: 'auto' | 'image' | 'video';
+  overwrite: string;
+}
+
+export function signCloudinaryUpload(
+  creds: CloudinaryCreds,
+  publicId: string,
+  resourceType: SignedStreamlessUpload['resourceType'] = 'auto',
+): SignedStreamlessUpload {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const params: Record<string, string> = {
+    timestamp,
+    public_id: publicId,
+    overwrite: 'true',
+  };
+  const canonical = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join('&');
+  const toHash = `${canonical}${creds.apiSecret}`;
+  const signature = createHash('sha1').update(toHash).digest('hex');
+  return {
+    cloudName: creds.cloudName,
+    apiKey: creds.apiKey,
+    signature,
+    timestamp,
+    publicId,
+    resourceType,
+    overwrite: 'true',
+  };
+}
