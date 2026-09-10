@@ -21,7 +21,7 @@ describe('DashboardService', () => {
     prisma.course.count.mockResolvedValue(3);
     prisma.enrollment.count.mockResolvedValue(5);
     prisma.enrollment.aggregate.mockResolvedValue({ _avg: { progressPercent: 40 } } as any);
-    prisma.enrollment.groupBy.mockResolvedValue([
+    (prisma.enrollment.groupBy as any).mockResolvedValue([
       { courseId: 'c1', _count: { _all: 2 }, _avg: { progressPercent: 80 } },
     ] as any);
     prisma.course.findMany.mockResolvedValue([{ id: 'c1', title: 'Negocios' }] as any);

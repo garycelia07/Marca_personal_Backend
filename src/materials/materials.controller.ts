@@ -35,6 +35,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { ALLOWED_MATERIAL_MIME_TYPES, MAX_MATERIAL_FILE_SIZE_BYTES } from './materials.constants';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 // skipMagicNumbersValidation: valida solo el Content-Type, evita un import ESM frágil bajo Jest
@@ -116,19 +118,49 @@ export class MaterialsController {
     return this.materialsService.findAllPublic(query);
   }
 
+  @Roles(Role.ADMIN)
   @Get('course/:courseId')
-  @ApiOperation({ summary: 'Listar materiales de un curso, paginado' })
+  @ApiOperation({ summary: 'Listar materiales de un curso, paginado (admin)' })
   findAllForCourse(@Param('courseId') courseId: string, @Query() query: PaginationQueryDto) {
     return this.materialsService.findAllForCourse(courseId, query);
+  }
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'Mis materiales (alumno): los de todos mis cursos con inscripción activa',
+    description:
+      'El estudiante autenticado recibe, paginado, los materiales de los cursos a los que tiene ' +
+      'acceso añadido y no vencido. Solo incluye los materiales asociados a esos cursos.',
+  })
+  findMine(@CurrentUser() user: AuthenticatedUser, @Query() query: PaginationQueryDto) {
+    return this.materialsService.findMaterialsForMyCourses(user.sub, query);
+  }
+
+  @Get('me/course/:courseId')
+  @ApiOperation({
+    summary: 'Materiales de un curso concreto (alumno), validando su inscripción activa',
+  })
+  findMineForCourse(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('courseId') courseId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.materialsService.findMaterialsForMyCourse(user.sub, courseId, query);
   }
 
   @Get(':id/file')
   @ApiOperation({
     summary: 'Descargar/visualizar el archivo (stream binario, no JSON)',
-    description: 'La respuesta es el binario del archivo con el Content-Type real (application/pdf, image/*, etc.), no un JSON.',
+    description:
+      'La respuesta es el binario del archivo con el Content-Type real. Los materiales privados ' +
+      'solo pueden descargarse si el usuario es admin o está inscrito activamente al curso asociado.',
   })
-  async streamFile(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
-    const { absolutePath, material } = await this.materialsService.getFileForStreaming(id);
+  async streamFile(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { absolutePath, material } = await this.materialsService.getFileForStreaming(id, user);
 
     try {
       await stat(absolutePath);
