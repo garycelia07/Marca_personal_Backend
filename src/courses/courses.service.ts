@@ -6,10 +6,16 @@ import { CreateModuleDto } from './dto/create-module.dto';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { buildPaginatedResult, toSkipTake } from '../common/utils/pagination.util';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
+import { Role } from '../common/enums/role.enum';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly enrollmentsService: EnrollmentsService,
+  ) {}
 
   create(dto: CreateCourseDto) {
     return this.prisma.course.create({ data: dto });
@@ -49,15 +55,26 @@ export class CoursesService {
     return buildPaginatedResult(data, total, page, limit);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: AuthenticatedUser) {
+    const isAdmin = user?.role === Role.ADMIN;
+    const hasAccess =
+      isAdmin || (!!user && (await this.enrollmentsService.hasActiveAccess(user.sub, id)));
+
+    const includeMaterials = isAdmin || hasAccess;
+
     const course = await this.prisma.course.findUnique({
       where: { id },
       include: {
         modules: {
           orderBy: { order: 'asc' },
-          include: { lessons: { orderBy: { order: 'asc' }, include: { materials: true } } },
+          include: {
+            lessons: {
+              orderBy: { order: 'asc' },
+              ...(includeMaterials ? { include: { materials: true } } : {}),
+            },
+          },
         },
-        materials: true,
+        ...(includeMaterials ? { materials: true } : {}),
       },
     });
     if (!course) throw new NotFoundException('Curso no encontrado');

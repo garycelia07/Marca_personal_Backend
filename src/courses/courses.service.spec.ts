@@ -3,10 +3,12 @@ import { NotFoundException } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { createPrismaMock, MockPrisma } from '../test/prisma-mock';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 describe('CoursesService', () => {
   let service: CoursesService;
   let prisma: MockPrisma;
+  let enrollmentsService: { hasActiveAccess: jest.Mock };
 
   const course = {
     id: 'course-1',
@@ -21,8 +23,13 @@ describe('CoursesService', () => {
 
   beforeEach(async () => {
     prisma = createPrismaMock();
+    enrollmentsService = { hasActiveAccess: jest.fn().mockResolvedValue(false) };
     const moduleRef = await Test.createTestingModule({
-      providers: [CoursesService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CoursesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EnrollmentsService, useValue: enrollmentsService },
+      ],
     }).compile();
     service = moduleRef.get(CoursesService);
   });
@@ -61,10 +68,20 @@ describe('CoursesService', () => {
       await expect(service.findOne('no-existe')).rejects.toThrow(NotFoundException);
     });
 
-    it('devuelve el curso con módulos/lecciones/materiales incluidos', async () => {
+    it('devuelve el curso con módulos/lecciones/materiales incluidos solo para admin', async () => {
       prisma.course.findUnique.mockResolvedValue(course as any);
-      const result = await service.findOne(course.id);
+      const result = await service.findOne(course.id, { sub: 'user-1', email: 'a@a.com', role: 'ADMIN' } as any);
       expect(result).toEqual(course);
+    });
+
+    it('no incluye materiales en el detalle público si el usuario no está inscrito', async () => {
+      prisma.course.findUnique.mockResolvedValue(course as any);
+
+      await service.findOne(course.id);
+
+      const query: any = prisma.course.findUnique.mock.calls[0][0];
+      expect(query.include).not.toHaveProperty('materials');
+      expect(query.include.modules.include.lessons).not.toHaveProperty('include');
     });
   });
 
@@ -136,7 +153,8 @@ describe('CoursesService', () => {
     });
 
     it('crea la lección asociada al módulo', async () => {
-      prisma.courseModule.findUnique.mockResolvedValue({ id: 'mod-1' } as any);
+      prisma.courseModule.findUnique.mockResolvedValue({ id: 'mod-1', courseId: 'course-1' } as any);
+      prisma.courseModule.findMany.mockResolvedValue([{ _count: { lessons: 0 } }] as any);
       prisma.lesson.create.mockResolvedValue({ id: 'lesson-1' } as any);
 
       await service.addLesson('mod-1', { title: 'Lección 1' });

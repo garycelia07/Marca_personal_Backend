@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
 import { MaterialsService } from './materials.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { createPrismaMock, MockPrisma } from '../test/prisma-mock';
 
 jest.mock('fs/promises', () => ({
@@ -50,6 +51,13 @@ describe('MaterialsService', () => {
         {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('./uploads/materials') },
+        },
+        {
+          provide: EnrollmentsService,
+          useValue: {
+            hasActiveAccess: jest.fn().mockResolvedValue(false),
+            activeCourseIdsForUser: jest.fn().mockResolvedValue([]),
+          },
         },
       ],
     }).compile();

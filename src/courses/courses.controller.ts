@@ -9,6 +9,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../common/enums/role.enum';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 
 @ApiTags('courses')
 @ApiBearerAuth('access-token')
@@ -32,9 +34,12 @@ export class CoursesController {
 
   @Public()
   @Get(':id')
-  @ApiOperation({ summary: 'Detalle de un curso con módulos, lecciones y materiales' })
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(id);
+  @ApiOperation({
+    summary:
+      'Detalle de un curso con módulos y lecciones; los materiales solo se incluyen si el usuario está inscrito o es admin',
+  })
+  findOne(@Param('id') id: string, @CurrentUser() user?: AuthenticatedUser) {
+    return this.coursesService.findOne(id, user);
   }
 
   @Roles(Role.ADMIN)

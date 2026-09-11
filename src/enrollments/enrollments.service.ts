@@ -58,6 +58,34 @@ export class EnrollmentsService {
     }
   }
 
+  /**
+   * Devuelve true si el usuario tiene una inscripción activa (permisos añadidos
+   * y no vencida) al curso. A diferencia de assertActiveAccess, no lanza errores,
+   * útil para validar acceso por material.
+   */
+  async hasActiveAccess(userId: string, courseId: string): Promise<boolean> {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId, courseId } },
+    });
+    if (!enrollment) return false;
+    return !(enrollment.expiresAt && enrollment.expiresAt < new Date());
+  }
+
+  /**
+   * Ids de los cursos con inscripción activa de un usuario (incluye los que no
+   * expiran). Se usa para filtrar los materiales a los que el alumno tiene acceso.
+   */
+  async activeCourseIdsForUser(userId: string): Promise<string[]> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        userId,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: { courseId: true },
+    });
+    return enrollments.map((enrollment) => enrollment.courseId);
+  }
+
   async updateExpiration(id: string, expiresAt: string | null) {
     const enrollment = await this.prisma.enrollment.findUnique({ where: { id } });
     if (!enrollment) throw new NotFoundException('Inscripción no encontrada');

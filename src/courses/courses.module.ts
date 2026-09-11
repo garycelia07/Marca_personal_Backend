@@ -4,8 +4,10 @@ import { CoursesController } from './courses.controller';
 import { LessonVideosService } from './course-videos.service';
 import { CourseVideosController } from './course-videos.controller';
 import { CourseCoverController } from './course-cover.controller';
+import { EnrollmentsModule } from '../enrollments/enrollments.module';
 
 @Module({
+  imports: [EnrollmentsModule],
   controllers: [CoursesController, CourseVideosController, CourseCoverController],
   providers: [CoursesService, LessonVideosService],
   exports: [CoursesService],
