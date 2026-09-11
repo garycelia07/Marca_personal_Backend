@@ -4,10 +4,6 @@ import { randomUUID } from 'crypto';
 import { mkdir, readdir, rm, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
-/**
- * Slots de imagen por sección del landing. Cada slot tiene UN solo archivo
- * activo a la vez: al subir una imagen nueva se borra la anterior del mismo slot.
- */
 export const IMAGE_SLOTS = ['hero', 'proyectos', 'servicios'] as const;
 export type ImageSlot = (typeof IMAGE_SLOTS)[number];
 
@@ -69,5 +65,13 @@ export class ContentImagesService implements OnModuleInit {
     await writeFile(join(this.slotDir(slot), storageKey), file.buffer);
 
     return { slot, replaced };
+  }
+
+  /** Borra la imagen activa del slot (si existe). Sirve para «quitar la portada». */
+  async remove(slot: ImageSlot): Promise<{ slot: ImageSlot; removed: boolean }> {
+    const existing = await this.findActive(slot);
+    if (!existing) return { slot, removed: false };
+    await rm(existing, { force: true });
+    return { slot, removed: true };
   }
 }

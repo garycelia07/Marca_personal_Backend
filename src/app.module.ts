@@ -14,6 +14,7 @@ import { LeadsModule } from './leads/leads.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { ProgressModule } from './progress/progress.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SystemModule } from './system/system.module';
 
@@ -24,6 +25,7 @@ import { SystemModule } from './system/system.module';
     MailModule,
     DashboardModule,
     RatingsModule,
+    ProgressModule,
     SystemModule,
     PrismaModule,
     AuthModule,

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   FileTypeValidator,
   Get,
   MaxFileSizeValidator,
@@ -122,5 +123,22 @@ export class ContentImagesController {
         'La imagen no existe en el servidor',
       );
     }
+  }
+
+  @ApiBearerAuth('access-token')
+  @Roles(Role.ADMIN)
+  @Delete(':slot')
+  @ApiOperation({
+    summary:
+      'Eliminar la imagen pública de una sección (hero, proyectos, servicios). Solo admin. Deja el slot vacío.',
+  })
+  @ApiParam({
+    name: 'slot',
+    enum: IMAGE_SLOTS,
+    description: 'hero | proyectos | servicios',
+  })
+  remove(@Param('slot') rawSlot: string) {
+    assertSlot(rawSlot);
+    return this.images.remove(rawSlot);
   }
 }

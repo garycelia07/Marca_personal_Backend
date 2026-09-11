@@ -46,6 +46,7 @@ model User {
 
   enrollments Enrollment[]
   ratings     Rating[]
+  progress    LessonProgress[]
 
   @@map("users")
 }
@@ -92,10 +93,27 @@ model Lesson {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  module    CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  materials Material[]
+  module      CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  materials   Material[]
+  progress    LessonProgress[]
 
   @@map("lessons")
+}
+
+// Lección marcada como vista. Se activa SOLO cuando el estudiante termina el
+// video de la lección (onEnded) y sirve para persistir el progreso entre
+// dispositivos y saber hasta dónde quedó cada alumno.
+model LessonProgress {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  lessonId  String   @map("lesson_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
 }
 
 // PDFs / material descargable. El archivo físico vive en Supabase Storage;

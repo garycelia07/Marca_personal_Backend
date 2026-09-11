@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   FileTypeValidator,
   Get,
@@ -6,6 +7,7 @@ import {
   NotFoundException,
   Param,
   ParseFilePipe,
+  Query,
   Put,
   Res,
   UploadedFile,
@@ -84,5 +86,13 @@ export class ServiceCoversController {
         throw new NotFoundException('La portada del servicio aún no está disponible');
       }
     }
+  }
+
+  @Roles(Role.ADMIN)
+  @Get(':name/media-sign')
+  async serviceMediaSign(@Param('name') name: string) {
+    const sign = this.covers.mediaSign(name);
+    if (!sign.ok) throw new BadRequestException('Cloudinary no está configurado: configura CLOUDINARY_*.');
+    return sign;
   }
 }
